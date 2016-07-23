@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strconv"
@@ -59,6 +60,14 @@ func NewTag(name, file string, line int, tagType TagType) Tag {
 		Type:    tagType,
 		Fields:  map[TagField]string{Line: l},
 	}
+}
+
+func (t Tag) ToJson() string {
+	jbytes, err := json.Marshal(t)
+	if err != nil {
+		return "{}"
+	}
+	return string(jbytes)
 }
 
 // The tags file format string representation of this tag.

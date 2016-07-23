@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -31,6 +32,7 @@ var (
 	relative     bool
 	listLangs    bool
 	fields       string
+	format       string
 )
 
 // ignore unknown flags
@@ -47,6 +49,7 @@ func init() {
 	flags.BoolVar(&relative, "tag-relative", false, "file paths should be relative to the directory containing the tag file.")
 	flags.BoolVar(&listLangs, "list-languages", false, "list supported languages.")
 	flags.StringVar(&fields, "fields", "", "include selected extension fields (only +l).")
+	flags.StringVar(&format, "format", "json", "Supported formats json/elisp/ctags.")
 
 	flags.Usage = func() {
 		fmt.Fprintf(os.Stderr, "gotags version %s\n\n", Version)
@@ -189,19 +192,6 @@ func main() {
 		}
 		tags = append(tags, ts...)
 	}
-
-	output := createMetaTags()
-	for _, tag := range tags {
-		if fieldSet.Includes(Language) {
-			tag.Fields[Language] = "Go"
-		}
-		output = append(output, tag.String())
-	}
-
-	if sortOutput {
-		sort.Sort(sort.StringSlice(output))
-	}
-
 	var out io.Writer
 	if len(outputFile) == 0 || outputFile == "-" {
 		// For compatibility with older gotags versions, also write to stdout
@@ -217,8 +207,58 @@ func main() {
 		defer file.Close()
 	}
 
-	for _, s := range output {
-		fmt.Fprintln(out, s)
+	switch format {
+	case "ctags":
+		output := createMetaTags()
+		for _, tag := range tags {
+			if fieldSet.Includes(Language) {
+				tag.Fields[Language] = "Go"
+			}
+			output = append(output, tag.String())
+		}
+
+		if sortOutput {
+			sort.Sort(sort.StringSlice(output))
+		}
+
+		for _, s := range output {
+			fmt.Fprintln(out, s)
+		}
+	case "json":
+		type document struct {
+			Imports   []Tag
+			Constants []Tag
+			Types     []Tag
+			Fields    []Tag
+			Methods   []Tag
+			Variables []Tag
+			Interface []Tag
+			Function  []Tag
+		}
+		doc := document{}
+		for _, tag := range tags {
+			switch tag.Type {
+			case Import:
+				doc.Imports = append(doc.Imports, tag)
+			case Variable:
+				doc.Variables = append(doc.Variables, tag)
+			case Type:
+				doc.Types = append(doc.Types, tag)
+			case Field:
+				doc.Fields = append(doc.Fields, tag)
+			case Interface:
+				doc.Interface = append(doc.Interface, tag)
+			case Method:
+				doc.Methods = append(doc.Methods, tag)
+			case Function:
+				doc.Function = append(doc.Function, tag)
+			}
+		}
+		if jbytes, err := json.Marshal(doc); err == nil {
+			fmt.Fprintln(out, string(jbytes))
+		} else {
+			fmt.Fprintln(out, "[]")
+		}
 	}
 }
 
