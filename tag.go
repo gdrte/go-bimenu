@@ -43,6 +43,7 @@ const (
 	Variable    TagType = "v"
 	Type        TagType = "t"
 	Interface   TagType = "n"
+	Prototype   TagType = "o"
 	Field       TagType = "w"
 	Embedded    TagType = "e"
 	Method      TagType = "m"
@@ -68,6 +69,55 @@ func (t Tag) ToJson() string {
 		return "{}"
 	}
 	return string(jbytes)
+}
+
+type CompactTag struct {
+	Line  int
+	Field string
+	Type  TagType
+}
+
+func (t Tag) ToJsonCompact() *CompactTag {
+	line, _ := strconv.Atoi(t.Address)
+	switch t.Type {
+	case Package:
+	case Import, Constant, Interface:
+		return &CompactTag{Type: t.Type, Line: line, Field: fmt.Sprintf("%s", t.Name)}
+	case Variable, Type:
+		return &CompactTag{Type: t.Type, Line: line, Field: fmt.Sprintf("%s %s", t.Name, t.Fields["type"])}
+	case Field:
+		return &CompactTag{Type: t.Type, Line: line, Field: fmt.Sprintf("%s %s %s", t.Fields["ctype"], t.Name, t.Fields["type"])}
+	case Embedded:
+	case Method, Prototype:
+		_type, ok := t.Fields["ctype"]
+		if !ok {
+			_type = t.Fields["ntype"]
+		}
+		var fs string
+		_, ok = t.Fields["type"]
+		if !ok {
+			fs = "%s"
+		} else {
+			fs = "(%s)"
+		}
+
+		return &CompactTag{Type: t.Type, Line: line, Field: fmt.Sprintf("%s %s%s"+fs, _type, t.Name, t.Fields["signature"], t.Fields["type"])}
+	case Function:
+		var fs string
+		_, ok := t.Fields["type"]
+		if !ok {
+			fs = "%s"
+		} else {
+			fs = "(%s)"
+		}
+
+		return &CompactTag{Type: t.Type, Line: line, Field: fmt.Sprintf("%s%s"+fs, t.Name, t.Fields["signature"], t.Fields["type"])}
+
+	}
+	return nil
+}
+func (t Tag) This() Tag {
+	return t
 }
 
 // The tags file format string representation of this tag.

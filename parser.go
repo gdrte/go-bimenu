@@ -185,7 +185,7 @@ func (p *tagParser) parseInterfaceMethods(name string, s *ast.InterfaceType) {
 	for _, f := range s.Methods.List {
 		var tag Tag
 		if len(f.Names) > 0 {
-			tag = p.createTag(f.Names[0].Name, f.Names[0].Pos(), Method)
+			tag = p.createTag(f.Names[0].Name, f.Names[0].Pos(), Prototype)
 		} else {
 			// embedded interface
 			tag = p.createTag(getType(f.Type, true), f.Pos(), Embedded)

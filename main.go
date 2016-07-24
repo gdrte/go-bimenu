@@ -207,6 +207,54 @@ func main() {
 		defer file.Close()
 	}
 
+	appendTag := func(tag Tag, array []interface{}) []interface{} {
+		switch format {
+		case "json":
+			return append(array, tag)
+		case "json-compact":
+			return append(array, tag.ToJsonCompact())
+		}
+		return nil
+	}
+
+	toJSON := func() {
+		type document struct {
+			Imports    []interface{}
+			Constants  []interface{}
+			Types      []interface{}
+			Fields     []interface{}
+			Methods    []interface{}
+			Variables  []interface{}
+			Interfaces []interface{}
+			Functions  []interface{}
+		}
+		doc := document{}
+		for _, tag := range tags {
+			switch tag.Type {
+			case Import:
+				doc.Imports = appendTag(tag, doc.Imports)
+			case Constant:
+				doc.Constants = appendTag(tag, doc.Constants)
+			case Variable:
+				doc.Variables = appendTag(tag, doc.Variables)
+			case Type:
+				doc.Types = appendTag(tag, doc.Types)
+			case Field:
+				doc.Fields = appendTag(tag, doc.Fields)
+			case Interface, Prototype:
+				doc.Interfaces = appendTag(tag, doc.Interfaces)
+			case Method:
+				doc.Methods = appendTag(tag, doc.Methods)
+			case Function:
+				doc.Functions = appendTag(tag, doc.Functions)
+			}
+		}
+		if jbytes, err := json.Marshal(doc); err == nil {
+			fmt.Fprintln(out, string(jbytes))
+		} else {
+			fmt.Fprintln(out, "[]")
+		}
+	}
 	switch format {
 	case "ctags":
 		output := createMetaTags()
@@ -224,41 +272,8 @@ func main() {
 		for _, s := range output {
 			fmt.Fprintln(out, s)
 		}
-	case "json":
-		type document struct {
-			Imports   []Tag
-			Constants []Tag
-			Types     []Tag
-			Fields    []Tag
-			Methods   []Tag
-			Variables []Tag
-			Interface []Tag
-			Function  []Tag
-		}
-		doc := document{}
-		for _, tag := range tags {
-			switch tag.Type {
-			case Import:
-				doc.Imports = append(doc.Imports, tag)
-			case Variable:
-				doc.Variables = append(doc.Variables, tag)
-			case Type:
-				doc.Types = append(doc.Types, tag)
-			case Field:
-				doc.Fields = append(doc.Fields, tag)
-			case Interface:
-				doc.Interface = append(doc.Interface, tag)
-			case Method:
-				doc.Methods = append(doc.Methods, tag)
-			case Function:
-				doc.Function = append(doc.Function, tag)
-			}
-		}
-		if jbytes, err := json.Marshal(doc); err == nil {
-			fmt.Fprintln(out, string(jbytes))
-		} else {
-			fmt.Fprintln(out, "[]")
-		}
+	case "json", "json-compact":
+		toJSON()
 	}
 }
 
