@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 )
 
 // Contants used for the meta tags
@@ -49,7 +50,7 @@ func init() {
 	flags.BoolVar(&relative, "tag-relative", false, "file paths should be relative to the directory containing the tag file.")
 	flags.BoolVar(&listLangs, "list-languages", false, "list supported languages.")
 	flags.StringVar(&fields, "fields", "", "include selected extension fields (only +l).")
-	flags.StringVar(&format, "format", "json", "Supported formats json/elisp/ctags.")
+	flags.StringVar(&format, "format", "json", "Supported formats json(json-compact)/ctags.")
 
 	flags.Usage = func() {
 		fmt.Fprintf(os.Stderr, "gotags version %s\n\n", Version)
@@ -180,18 +181,34 @@ func main() {
 		flags.Usage()
 		os.Exit(1)
 	}
-
-	tags := []Tag{}
-	for _, file := range files {
-		ts, err := Parse(file, relative, basedir)
-		if err != nil {
-			if !silent {
-				fmt.Fprintf(os.Stderr, "parse error: %s\n\n", err)
-			}
-			continue
+	tcw := make(chan []Tag)
+	tcr := make(chan []Tag)
+	wg := sync.WaitGroup{}
+	wg.Add(len(files))
+	go func() {
+		tags := []Tag{}
+		for ts := range tcw {
+			tags = append(tags, ts...)
 		}
-		tags = append(tags, ts...)
+		tcr <- tags
+		close(tcr)
+	}()
+	for _, file := range files {
+		go func(file string) {
+			defer wg.Done()
+			ts, err := Parse(file, relative, basedir)
+			if err != nil {
+				if !silent {
+					fmt.Fprintf(os.Stderr, "parse error: %s\n\n", err)
+				}
+				return
+			}
+			tcw <- ts
+		}(file)
 	}
+	wg.Wait()
+	close(tcw)
+
 	var out io.Writer
 	if len(outputFile) == 0 || outputFile == "-" {
 		// For compatibility with older gotags versions, also write to stdout
@@ -229,7 +246,7 @@ func main() {
 			Functions  []interface{}
 		}
 		doc := document{}
-		for _, tag := range tags {
+		for _, tag := range <-tcr {
 			switch tag.Type {
 			case Import:
 				doc.Imports = appendTag(tag, doc.Imports)
@@ -258,7 +275,7 @@ func main() {
 	switch format {
 	case "ctags":
 		output := createMetaTags()
-		for _, tag := range tags {
+		for _, tag := range <-tcr {
 			if fieldSet.Includes(Language) {
 				tag.Fields[Language] = "Go"
 			}

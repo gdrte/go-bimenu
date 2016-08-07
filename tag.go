@@ -13,7 +13,7 @@ import (
 type Tag struct {
 	Name    string
 	File    string
-	Address string
+	Address int
 	Type    TagType
 	Fields  map[TagField]string
 }
@@ -53,13 +53,12 @@ const (
 
 // NewTag creates a new Tag.
 func NewTag(name, file string, line int, tagType TagType) Tag {
-	l := strconv.Itoa(line)
 	return Tag{
 		Name:    name,
 		File:    file,
-		Address: l,
+		Address: line,
 		Type:    tagType,
-		Fields:  map[TagField]string{Line: l},
+		Fields:  map[TagField]string{Line: strconv.Itoa(line)},
 	}
 }
 
@@ -72,46 +71,38 @@ func (t Tag) ToJson() string {
 }
 
 type CompactTag struct {
+	File  string
 	Line  int
 	Field string
 	Type  TagType
 }
 
 func (t Tag) ToJsonCompact() *CompactTag {
-	line, _ := strconv.Atoi(t.Address)
+	line := t.Address
+	ifBlank := func(s string) string {
+		if len(s) == 0 {
+			return "%s"
+		}
+		return "(%s)"
+	}
+
 	switch t.Type {
 	case Package:
 	case Import, Constant, Interface:
-		return &CompactTag{Type: t.Type, Line: line, Field: fmt.Sprintf("%s", t.Name)}
+		return &CompactTag{Type: t.Type, Line: line, Field: fmt.Sprintf("%s", t.Name), File: t.File}
 	case Variable, Type:
-		return &CompactTag{Type: t.Type, Line: line, Field: fmt.Sprintf("%s %s", t.Name, t.Fields["type"])}
+		return &CompactTag{Type: t.Type, Line: line, Field: fmt.Sprintf("%s %s", t.Name, t.Fields["type"]), File: t.File}
 	case Field:
-		return &CompactTag{Type: t.Type, Line: line, Field: fmt.Sprintf("%s %s %s", t.Fields["ctype"], t.Name, t.Fields["type"])}
+		return &CompactTag{Type: t.Type, Line: line, Field: fmt.Sprintf("%s %s %s", t.Fields["ctype"], t.Name, t.Fields["type"]), File: t.File}
 	case Embedded:
 	case Method, Prototype:
 		_type, ok := t.Fields["ctype"]
 		if !ok {
 			_type = t.Fields["ntype"]
 		}
-		var fs string
-		_, ok = t.Fields["type"]
-		if !ok {
-			fs = "%s"
-		} else {
-			fs = "(%s)"
-		}
-
-		return &CompactTag{Type: t.Type, Line: line, Field: fmt.Sprintf("%s %s%s"+fs, _type, t.Name, t.Fields["signature"], t.Fields["type"])}
+		return &CompactTag{Type: t.Type, Line: line, Field: fmt.Sprintf("%s %s%s"+ifBlank(t.Fields["type"]), _type, t.Name, t.Fields["signature"], t.Fields["type"]), File: t.File}
 	case Function:
-		var fs string
-		_, ok := t.Fields["type"]
-		if !ok {
-			fs = "%s"
-		} else {
-			fs = "(%s)"
-		}
-
-		return &CompactTag{Type: t.Type, Line: line, Field: fmt.Sprintf("%s%s"+fs, t.Name, t.Fields["signature"], t.Fields["type"])}
+		return &CompactTag{Type: t.Type, Line: line, Field: fmt.Sprintf("%s%s"+ifBlank(t.Fields["type"]), t.Name, t.Fields["signature"], t.Fields["type"]), File: t.File}
 
 	}
 	return nil
@@ -128,7 +119,7 @@ func (t Tag) String() string {
 	b.WriteByte('\t')
 	b.WriteString(t.File)
 	b.WriteByte('\t')
-	b.WriteString(t.Address)
+	b.WriteString(strconv.Itoa(t.Address))
 	b.WriteString(";\"\t")
 	b.WriteString(string(t.Type))
 	b.WriteByte('\t')
