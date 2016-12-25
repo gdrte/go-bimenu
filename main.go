@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"sort"
 	"strings"
 	"sync"
 )
@@ -28,12 +27,10 @@ var (
 	inputFile    string
 	outputFile   string
 	recurse      bool
-	sortOutput   bool
+	sortOutput   bool=true
 	silent       bool
 	relative     bool
-	listLangs    bool
 	fields       string
-	format       string
 )
 
 // ignore unknown flags
@@ -45,15 +42,13 @@ func init() {
 	flags.StringVar(&inputFile, "L", "", `source file names are read from the specified file. If file is "-", input is read from standard in.`)
 	flags.StringVar(&outputFile, "f", "", `write output to specified file. If file is "-", output is written to standard out.`)
 	flags.BoolVar(&recurse, "R", false, "recurse into directories in the file list.")
-	flags.BoolVar(&sortOutput, "sort", true, "sort tags.")
 	flags.BoolVar(&silent, "silent", false, "do not produce any output on error.")
 	flags.BoolVar(&relative, "tag-relative", false, "file paths should be relative to the directory containing the tag file.")
-	flags.BoolVar(&listLangs, "list-languages", false, "list supported languages.")
 	flags.StringVar(&fields, "fields", "", "include selected extension fields (only +l).")
-	flags.StringVar(&format, "format", "json", "Supported formats json(json-compact)/ctags.")
+
 
 	flags.Usage = func() {
-		fmt.Fprintf(os.Stderr, "gotags version %s\n\n", Version)
+		fmt.Fprintf(os.Stderr, "go-emacsoutline version %s\n\n", Version)
 		fmt.Fprintf(os.Stderr, "Usage: %s [options] file(s)\n\n", os.Args[0])
 		flags.PrintDefaults()
 	}
@@ -146,10 +141,6 @@ func main() {
 		return
 	}
 
-	if listLangs {
-		fmt.Println("Go")
-		return
-	}
 
 	files, err := getFileNames()
 	if err != nil {
@@ -175,7 +166,6 @@ func main() {
 		}
 	}
 
-	fieldSet, err := parseFields(fields)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n\n", err)
 		flags.Usage()
@@ -225,13 +215,7 @@ func main() {
 	}
 
 	appendTag := func(tag Tag, array []interface{}) []interface{} {
-		switch format {
-		case "json":
 			return append(array, tag)
-		case "json-compact":
-			return append(array, tag.ToJsonCompact())
-		}
-		return nil
 	}
 
 	toJSON := func() {
@@ -272,26 +256,8 @@ func main() {
 			fmt.Fprintln(out, "[]")
 		}
 	}
-	switch format {
-	case "ctags":
-		output := createMetaTags()
-		for _, tag := range <-tcr {
-			if fieldSet.Includes(Language) {
-				tag.Fields[Language] = "Go"
-			}
-			output = append(output, tag.String())
-		}
-
-		if sortOutput {
-			sort.Sort(sort.StringSlice(output))
-		}
-
-		for _, s := range output {
-			fmt.Fprintln(out, s)
-		}
-	case "json", "json-compact":
 		toJSON()
-	}
+
 }
 
 // createMetaTags returns a list of meta tags.
