@@ -24,3 +24,5 @@ https://github.com/gdrte/emacs-settings/blob/master/emacs.d/lisp/go-bimenu.el
 	-v=false: print version.
 
 Also watch the demo screencast![demo screencast](./go-bimenu.gif?raw=true).
+
+This work is based on https://github.com/jstemmer/gotags. I have removed the support for ctags and just made exclusively work with my emacs plugin. Many thanks to @jstemmer
