@@ -23,3 +23,4 @@ https://github.com/gdrte/emacs-settings/blob/master/emacs.d/lisp/go-bimenu.el
 	-tag-relative=false: file paths should be relative to the directory containing the tag file.
 	-v=false: print version.
 
+Also watch the demo screencast![demo screencast](./go-bimenu.gif?raw=true).
