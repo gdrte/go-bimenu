@@ -5,7 +5,7 @@ https://github.com/gdrte/emacs-settings/blob/master/emacs.d/lisp/go-bimenu.el
 
 ## Installation
 
-[Go][] version 1.1 or higher is required. Install or update go-emacsoutline using the
+[Go][] version 1.1 or higher is required. Install or update go-bimenu using the
 `go get` command:
 
 	go get -u github.com/gdrte/go-bimenu
