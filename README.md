@@ -1,17 +1,18 @@
-# gotags
+# go-bimenu
 
-go-emacsoutline is a [ctags][]-compatible tag generator for [Go][].
+go-bimenu is a simple tool to parse golang into a json model. This tool is a backend to the emacs plugin
+https://github.com/gdrte/emacs-settings/blob/master/emacs.d/lisp/go-bimenu.el
 
 ## Installation
 
-[Go][] version 1.1 or higher is required. Install or update gotags using the
+[Go][] version 1.1 or higher is required. Install or update go-emacsoutline using the
 `go get` command:
 
-	go get -u github.com/gdrte/go-emacsoutline
+	go get -u github.com/gdrte/go-bimenu
 
 ## Usage
 
-	go-emacsoutline [options] file(s)
+	go-bimenu [options] file(s)
 
 	-L="": source file names are read from the specified file. If file is "-", input is read from standard in.
 	-R=false: recurse into directories in the file list.
